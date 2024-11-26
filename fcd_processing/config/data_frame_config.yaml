@@ -1,0 +1,15 @@
+HEADER_DATI: {
+    ID: int64,
+    Lat: float64,
+    Long: float64,
+    Direction: int64,
+    Velocity: int64,
+    Timestamp: object,
+    EngineStat: int64,
+    GpsQuality: int64,
+    ID car: str,
+    IDSystem: object,
+    Class: object,
+    Odometro: int64,
+}
+
