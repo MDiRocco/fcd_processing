@@ -16,6 +16,7 @@ HEADER_DATI = (  # noqa:WPS317
     'ID', 'Lat', 'Long', 'Direction', 'Velocity', 'Timestamp', 'EngineStat',
     'GpsQuality', 'ID car', 'IDSystem', 'Class', 'Odometro',
 )
+SUPPRESS_DTYPEWARNING = {'ID car': str}  # noqa: WPS407 # DtypeWarning: Columns (8) have mixed types
 INPUT_FOLDER = Path.cwd() / 'input_data'
 OUTPUT_DATA = Path.cwd() / 'output_data'
 OUTPUT_DATA.mkdir(exist_ok=True)
@@ -33,7 +34,8 @@ def filter_by_polygon(chunk_polygon):
     Returns:
         GeoDataFrame: Dataframe filtered
     """
-    chunk = pd.read_csv(chunk_polygon[0], names=HEADER_DATI)
+    chunk = pd.read_csv(chunk_polygon[0], names=HEADER_DATI, dtype=SUPPRESS_DTYPEWARNING)
+
     polygon = chunk_polygon[1]
 
     return gpd.sjoin(
@@ -126,7 +128,6 @@ def load_csv_chunk_mp(path_folder, polygon):
         extracted_data = extract_data_from_archive(archive_file)
         if extracted_data:
             file_to_process.append(extracted_data)
-
     for data_file_str in file_to_process:
         data_file = Path(data_file_str)
         if (data_file.name.endswith('csv') or data_file.name.endswith('txt')):
@@ -166,18 +167,16 @@ def extraction_run(data_folder, polygon_path, multiple):
             if object_in_folder.is_dir():
                 for archive_file in object_in_folder.iterdir():
                     file_name, gdf = load_csv_chunk_mp(archive_file, polygon)
-                logging.info('Extraction time {0}'.format(time.time() - start))
-                if file_name:
-                    gdf.to_csv(OUTPUT_DATA / '{0}_{1}.csv'.format(file_name, polygon_path.stem.split('.')[0]))
-                    # gdf.to_file(filename=OUTPUT_DATA / 'data_split_{0}_{1}.shp.zip'.format(file_name, polygon_path), driver='ESRI Shapefile')
             elif object_in_folder.is_file():
                 file_name, gdf = load_csv_chunk_mp(object_in_folder, polygon)
-                logging.info('Extraction time {0}'.format(time.time() - start))
-                if file_name:
-                    gdf.to_csv(OUTPUT_DATA / '{0}_{1}.csv'.format(file_name, polygon_path.stem.split('.')[0]))
+            logging.info('Extraction time {0}'.format(time.time() - start))
+            if file_name:
+                gdf.to_csv(OUTPUT_DATA / '{0}_{1}.csv'.format(file_name, polygon_path.stem.split('.')[0]))
+                # gdf.to_file(filename=OUTPUT_DATA / 'data_split_{0}_{1}.shp.zip'.format(file_name, polygon_path), driver='ESRI Shapefile')
 
     else:
         start = time.time()
         file_name, gdf = load_csv_chunk_mp(data_folder, polygon)
         logging.info('Extraction time {0}'.format(time.time() - start))
         gdf.to_csv(OUTPUT_DATA / '{0}_{1}.csv'.format(file_name, polygon_path.stem.split('.')[0]))
+
