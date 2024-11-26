@@ -28,6 +28,8 @@ def extract(
     if (Path(input_folder).exists() and Path(polygon_path).exists()):
         return extract_fcd.extraction_run(Path(input_folder), Path(polygon_path), multiple)
     else:
+        logging.error('{0}, {1}'.format(input_folder, Path(input_folder).exists()))
+        logging.error('{0}, {1}'.format(polygon_path, Path(polygon_path).exists()))
         logging.error('Input not valid or not found')
 
 
