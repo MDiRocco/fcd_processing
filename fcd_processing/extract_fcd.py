@@ -10,16 +10,21 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
+import yaml
 
 GLOBAL_CRS = '4326'
-HEADER_DATI = (  # noqa:WPS317
-    'ID', 'Lat', 'Long', 'Direction', 'Velocity', 'Timestamp', 'EngineStat',
-    'GpsQuality', 'ID car', 'IDSystem', 'Class', 'Odometro',
-)
+# HEADER_DATI = (  # noqa:WPS317
+#     'ID', 'Lat', 'Long', 'Direction', 'Velocity', 'Timestamp', 'EngineStat',
+#     'GpsQuality', 'ID car', 'IDSystem', 'Class', 'Odometro',
+# )
+# HEADER_DATI = ''
+COLUMNS_NAME, COLUMNS_DTYPE = ['', '']
 SUPPRESS_DTYPEWARNING = {'ID car': str}  # noqa: WPS407 # DtypeWarning: Columns (8) have mixed types
 INPUT_FOLDER = Path.cwd() / 'input_data'
 OUTPUT_DATA = Path.cwd() / 'output_data'
 OUTPUT_DATA.mkdir(exist_ok=True)
+CONFIG_FILE = Path.cwd() / 'config' / 'data_frame_config.yaml'
+
 SPLITTED_INPUT = Path.cwd() / 'splitted_input'
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)  # noqa:WPS323
 
@@ -34,7 +39,7 @@ def filter_by_polygon(chunk_polygon):
     Returns:
         GeoDataFrame: Dataframe filtered
     """
-    chunk = pd.read_csv(chunk_polygon[0], names=HEADER_DATI, dtype=SUPPRESS_DTYPEWARNING)
+    chunk = pd.read_csv(chunk_polygon[0], names=COLUMNS_NAME, dtype=COLUMNS_DTYPE)
 
     polygon = chunk_polygon[1]
 
@@ -122,7 +127,6 @@ def load_csv_chunk_mp(path_folder, polygon):
     file_name = ''
     file_to_process = []
 
-    # for archive_file in path_folder.iterdir():
     archive_file = path_folder
     if (archive_file.name.endswith('zip')):
         extracted_data = extract_data_from_archive(archive_file)
@@ -150,6 +154,17 @@ def load_csv_chunk_mp(path_folder, polygon):
     return (out_name, gdf)
 
 
+def set_config_var():
+    """Summary.
+
+    Returns:
+        _type_: _description_
+    """
+    with open(CONFIG_FILE, 'r') as in_file:
+        config_data = yaml.safe_load(in_file)['HEADER_DATI']
+    return [config_data.keys(), config_data]
+
+
 def extraction_run(data_folder, polygon_path, multiple):
     """Run the Main program for a single day of data.
 
@@ -158,6 +173,9 @@ def extraction_run(data_folder, polygon_path, multiple):
         polygon_path (str): Path for the poligon.
         multiple (bool): Set to True for multiple day procesing
     """
+    global COLUMNS_NAME, COLUMNS_DTYPE
+    COLUMNS_NAME, COLUMNS_DTYPE = set_config_var()
+
     polygon = gpd.read_file(polygon_path)
     polygon.to_crs('EPSG:{0}'.format(GLOBAL_CRS), inplace=True)
 
@@ -179,4 +197,3 @@ def extraction_run(data_folder, polygon_path, multiple):
         file_name, gdf = load_csv_chunk_mp(data_folder, polygon)
         logging.info('Extraction time {0}'.format(time.time() - start))
         gdf.to_csv(OUTPUT_DATA / '{0}_{1}.csv'.format(file_name, polygon_path.stem.split('.')[0]))
-
